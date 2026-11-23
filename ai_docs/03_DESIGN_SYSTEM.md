@@ -26,13 +26,18 @@ The aesthetic is **AWS Cloud Club Midnight Violet** — engineered for both clos
 | `--status-amber` | `#F59E0B` | `rgb(245, 158, 11)` | Stale cache / fallback warning |
 | `--status-rose` | `#F43F5E` | `rgb(244, 63, 94)` | Destructive reset confirmation / connection error |
 
-### Wheel Segment Alternating Palette
-To ensure adjacent segments always have distinct contrast (even when `N` is odd), the wheel cycles through a curated 4-shade purple spectrum:
-1. **Deep Indigo Violet**: `#1E1438`
-2. **Royal AWS Purple**: `#4C1D95`
-3. **Vibrant Amethyst**: `#6D28D9`
-4. **Midnight Plum**: `#2E1065`
-*(When the segment count `N % 4 === 1`, the final slice automatically selects shade `#3B177E` so slice `N-1` and slice `0` never share the same background color.)*
+### Wheel Segment Multi-Color High-Contrast Palette (UI Overhaul v2)
+Following organizer visual review on projector screens, the wheel was upgraded from a monochrome purple cycle to a bold, projector-safe 10-color spectrum with per-slice radial depth gradients and crisp white outlined labels:
+1. **Violet**: `#7C3AED` (highlight `#A78BFA`)
+2. **Pink**: `#DB2777` (highlight `#F9A8D4`)
+3. **Amber**: `#D97706` (highlight `#FCD34D`)
+4. **Emerald**: `#059669` (highlight `#6EE7B7`)
+5. **Blue**: `#2563EB` (highlight `#93C5FD`)
+6. **Red**: `#DC2626` (highlight `#FCA5A5`)
+7. **Royal Purple**: `#7E22CE` (highlight `#D8B4FE`)
+8. **Cyan**: `#0891B2` (highlight `#67E8F9`)
+9. **Orange**: `#EA580C` (highlight `#FDBA74`)
+10. **Indigo**: `#4F46E5` (highlight `#A5B4FC`)
 
 ---
 
@@ -66,6 +71,6 @@ To ensure adjacent segments always have distinct contrast (even when `N` is odd)
 
 ## 5. Layout, Elevation & Microinteractions
 
-- **Ambient Lighting**: Two soft radial gradients (`rgba(139, 92, 246, 0.14)` and `rgba(168, 85, 247, 0.10)`) positioned behind the wheel hub and top header to create depth on dark projectors without washing out contrast.
-- **Wheel Outer Ring**: Dual metallic-violet bezel with 24 subtle perimeter LED indicator dots that pulse softly during rotation.
-- **Fixed Pointer**: Positioned at the right-hand 3 o'clock (`0 rad`) or top 12 o'clock (`-π/2 rad`) anchor — we standardize on a prominent **top-center (12 o'clock) ruby-violet jewelled pointer** with a drop shadow and subtle deflection bounce when slice pegs pass beneath it.
+- **Ambient Lighting**: Deep obsidian-violet backdrop (`#060412` → `#150D2E`) layered with crown/side ambient spotlights, subtle dot-grid texture, and a live HTML5 Canvas background rendering drifting translucent color orbs and twinkling stars (respects `prefers-reduced-motion`).
+- **Wheel Outer Ring**: Conic metallic multi-color bezel with 36 perimeter LED indicator dots that chase softly when idle, accelerate during spins, and sparkle upon winner reveal, backed by a rotating rainbow halo glow.
+- **Fixed Pointer**: Prominent **top-center (12 o'clock) fuchsia-violet jewelled pointer** with outer glow and spring deflection bounce as each slice peg passes beneath it.

@@ -1,130 +1,136 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LOCAL_BANNER_URL, REMOTE_BANNER_URL } from '../layout/Header';
 
 interface SplashScreenProps {
   prefersReducedMotion: boolean;
   onComplete: () => void;
 }
 
-export const SplashScreen: React.FC<SplashScreenProps> = ({
-  prefersReducedMotion,
-  onComplete,
-}) => {
-  const [visible, setVisible] = useState<boolean>(true);
-  const [bannerSrc, setBannerSrc] = useState<string>(REMOTE_BANNER_URL);
-  const [bannerFailed, setBannerFailed] = useState<boolean>(false);
+export const SplashScreen: React.FC<SplashScreenProps> = ({ prefersReducedMotion, onComplete }) => {
+  const [phase, setPhase] = useState<'in' | 'hold' | 'out'>('in');
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    // Respect prefers-reduced-motion without artificial delay
-    const durationMs = prefersReducedMotion ? 150 : 1750;
-    const timer = window.setTimeout(() => {
-      setVisible(false);
-    }, durationMs);
-
-    const completeTimer = window.setTimeout(() => {
+    if (prefersReducedMotion) {
       onComplete();
-    }, durationMs + (prefersReducedMotion ? 50 : 350));
+      return;
+    }
+    const t1 = window.setTimeout(() => setPhase('hold'), 400);
+    const t2 = window.setTimeout(() => setPhase('out'), 2000);
+    const t3 = window.setTimeout(() => onComplete(), 2500);
+
+    // Animate progress bar
+    const interval = window.setInterval(() => {
+      setProgress(p => Math.min(p + 2, 100));
+    }, 35);
 
     return () => {
-      window.clearTimeout(timer);
-      window.clearTimeout(completeTimer);
+      clearTimeout(t1); clearTimeout(t2); clearTimeout(t3);
+      clearInterval(interval);
     };
-  }, [onComplete, prefersReducedMotion]);
-
-  const handleBannerError = () => {
-    if (bannerSrc === REMOTE_BANNER_URL) {
-      setBannerSrc(LOCAL_BANNER_URL);
-    } else {
-      setBannerFailed(true);
-    }
-  };
+  }, [prefersReducedMotion, onComplete]);
 
   return (
     <AnimatePresence>
-      {visible && (
+      {phase !== 'out' ? (
         <motion.div
-          key="splash-screen"
+          key="splash"
           data-testid="splash-screen"
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: prefersReducedMotion ? 0.05 : 0.35, ease: 'easeInOut' }}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#090714] px-6 select-none overflow-hidden"
+          transition={{ duration: 0.5, ease: 'easeInOut' }}
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden"
+          style={{ background: 'radial-gradient(ellipse at 50% 40%, #1a0845 0%, #090714 60%, #040210 100%)' }}
         >
-          {/* Ambient radial purple backlight */}
-          <div
-            aria-hidden="true"
-            className="absolute w-[520px] h-[520px] rounded-full blur-[130px] opacity-45 pointer-events-none"
+          {/* Rotating rainbow halo */}
+          <motion.div
+            animate={prefersReducedMotion ? {} : { rotate: 360 }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+            className="absolute w-[500px] h-[500px] rounded-full opacity-30"
             style={{
-              background:
-                'radial-gradient(circle, rgba(139, 92, 246, 0.55) 0%, rgba(168, 85, 247, 0.15) 60%, transparent 80%)',
+              background: 'conic-gradient(from 0deg, #7C3AED, #DB2777, #D97706, #059669, #2563EB, #DC2626, #0891B2, #7C3AED)',
+              filter: 'blur(60px)',
             }}
           />
 
+          {/* Inner spotlight */}
+          <div
+            className="absolute w-[300px] h-[300px] rounded-full opacity-40"
+            style={{
+              background: 'radial-gradient(circle, rgba(168,85,247,0.8) 0%, transparent 70%)',
+              filter: 'blur(40px)',
+            }}
+          />
+
+          {/* Content */}
           <motion.div
-            initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.94, y: 12 }}
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
-            className="relative z-10 flex flex-col items-center max-w-lg w-full text-center"
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="relative z-10 flex flex-col items-center text-center px-8"
           >
-            {/* Official 16:9 AWS Cloud Club Banner with preserved aspect ratio */}
-            <div className="w-64 sm:w-80 aspect-[16/9] rounded-2xl overflow-hidden bg-[#161D26] border border-[#C4B5FD]/30 shadow-purple-glow-lg mb-6 flex items-center justify-center">
-              {!bannerFailed ? (
-                <img
-                  src={bannerSrc}
-                  alt="AWS Student Builder Group Official Banner"
-                  onError={handleBannerError}
-                  className="w-full h-full object-contain"
-                />
-              ) : (
-                <div className="px-4 py-2 text-sm font-extrabold tracking-widest uppercase text-[#C4B5FD]">
-                  AWS Student Builder Group
-                </div>
-              )}
-            </div>
-
-            <motion.span
-              initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 6 }}
+            {/* AWS Banner */}
+            <motion.img
+              src="/assets/Banner_Cloud_Club_Dark.svg"
+              alt="AWS Student Builder Group"
+              className="w-64 sm:w-80 max-h-28 object-contain mb-6"
+              initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15, duration: 0.4 }}
-              className="text-xs font-mono uppercase tracking-[0.25em] text-[#C4B5FD] px-3 py-1 rounded-full bg-[#8B5CF6]/15 border border-[#8B5CF6]/35 mb-3"
-            >
-              Official Community Event Platform
-            </motion.span>
+              transition={{ delay: 0.1, duration: 0.5 }}
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+            />
 
+            {/* Title */}
             <motion.h1
-              initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 8 }}
+              className="text-3xl sm:text-5xl font-black tracking-tight mb-2"
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.25, duration: 0.45 }}
-              className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight"
+              transition={{ delay: 0.2, duration: 0.4 }}
+              style={{
+                background: 'linear-gradient(135deg, #FFFFFF 0%, #DDD6FE 50%, #C4B5FD 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
             >
               AWS Student Builder Group
             </motion.h1>
 
+            {/* Subtitle */}
             <motion.p
-              initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.35, duration: 0.45 }}
-              className="text-sm sm:text-lg font-medium text-[#C4B5FD] mt-1.5"
+              className="text-sm sm:text-base font-semibold tracking-widest uppercase mb-8"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.35, duration: 0.4 }}
+              style={{
+                background: 'linear-gradient(90deg, #F472B6, #A78BFA)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
             >
               COMSATS University Islamabad
             </motion.p>
 
-            {/* Elegant animated progress line */}
-            <div className="w-48 h-1 rounded-full bg-[#1B1530] overflow-hidden mt-7 border border-[#C4B5FD]/15">
-              <motion.div
-                initial={{ width: '15%' }}
-                animate={{ width: '100%' }}
-                transition={{
-                  duration: prefersReducedMotion ? 0.1 : 1.45,
-                  ease: 'easeInOut',
+            {/* Progress bar */}
+            <motion.div
+              className="w-48 sm:w-64 h-1 rounded-full overflow-hidden"
+              style={{ background: 'rgba(255,255,255,0.1)' }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+            >
+              <div
+                className="h-full rounded-full transition-all duration-100"
+                style={{
+                  width: `${progress}%`,
+                  background: 'linear-gradient(90deg, #7C3AED, #DB2777, #D97706, #059669)',
                 }}
-                className="h-full rounded-full bg-gradient-to-r from-[#8B5CF6] via-[#A855F7] to-[#C4B5FD]"
               />
-            </div>
+            </motion.div>
           </motion.div>
         </motion.div>
-      )}
+      ) : null}
     </AnimatePresence>
   );
 };

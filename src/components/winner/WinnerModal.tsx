@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Award, RotateCw, Sparkles, X } from 'lucide-react';
+import { RotateCw, X } from 'lucide-react';
 import { WinnerRecord } from '../../types';
 import { ConfettiOverlay } from './ConfettiOverlay';
 
@@ -14,20 +14,11 @@ interface WinnerModalProps {
 }
 
 export const WinnerModal: React.FC<WinnerModalProps> = ({
-  winner,
-  isOpen,
-  canSpinAgain,
-  prefersReducedMotion,
-  onSpinAgain,
-  onClose,
+  winner, isOpen, canSpinAgain, prefersReducedMotion, onSpinAgain, onClose,
 }) => {
   useEffect(() => {
     if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
+    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
@@ -35,126 +26,129 @@ export const WinnerModal: React.FC<WinnerModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && winner && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="winner-modal-heading"
+        <div role="dialog" aria-modal="true" aria-labelledby="winner-modal-heading"
           data-testid="winner-modal"
-          className="fixed inset-0 z-40 flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
-        >
-          {/* Confetti celebration burst */}
+          className="fixed inset-0 z-40 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
           <ConfettiOverlay active={isOpen} prefersReducedMotion={prefersReducedMotion} />
 
-          {/* Dark backdrop with blur */}
+          {/* Backdrop */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: prefersReducedMotion ? 0.05 : 0.25 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
             onClick={onClose}
-            className="fixed inset-0 bg-[#090714]/85 backdrop-blur-xl"
+            className="fixed inset-0 bg-black/85 backdrop-blur-2xl"
           />
 
-          {/* Modal Spotlight Container */}
+          {/* Modal card */}
           <motion.div
-            initial={
-              prefersReducedMotion
-                ? { opacity: 1 }
-                : { opacity: 0, scale: 0.88, y: 24 }
-            }
+            initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.8, y: 40 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={
-              prefersReducedMotion
-                ? { opacity: 0 }
-                : { opacity: 0, scale: 0.94, y: 12 }
-            }
-            transition={{ duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
-            className="relative z-10 w-full max-w-2xl rounded-3xl bg-gradient-to-b from-[#231842] via-[#1B1530] to-[#130E24] border-2 border-[#C4B5FD]/40 p-6 sm:p-10 text-center shadow-purple-glow-lg overflow-hidden"
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="relative z-10 w-full max-w-2xl rounded-3xl overflow-hidden text-center"
+            style={{
+              background: 'linear-gradient(145deg, #1A0D35 0%, #0D0820 50%, #180B30 100%)',
+              border: '1px solid rgba(196,181,253,0.3)',
+              boxShadow: '0 0 120px rgba(168,85,247,0.5), 0 0 60px rgba(236,72,153,0.3), 0 30px 80px rgba(0,0,0,0.9)',
+            }}
           >
-            {/* Purple Stage Spotlight */}
-            <div
-              aria-hidden="true"
-              className="absolute -top-32 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full blur-[90px] opacity-60 pointer-events-none"
-              style={{
-                background:
-                  'radial-gradient(circle, rgba(168, 85, 247, 0.75) 0%, rgba(139, 92, 246, 0.15) 70%, transparent 100%)',
-              }}
-            />
+            {/* Rainbow top border — thick */}
+            <div className="h-1.5 w-full" style={{
+              background: 'linear-gradient(90deg, #7C3AED, #DB2777, #D97706, #059669, #2563EB, #0891B2, #7C3AED)',
+            }} />
 
-            {/* Close icon button */}
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close Winner Announcement"
-              className="absolute top-4 right-4 p-2.5 rounded-xl bg-[#090714]/50 hover:bg-[#8B5CF6]/30 text-[#C4B5FD] border border-[#C4B5FD]/20 transition"
-            >
+            {/* Close button */}
+            <button type="button" onClick={onClose}
+              className="absolute top-4 right-4 p-2 rounded-xl bg-white/5 hover:bg-white/15 text-white/60 hover:text-white border border-white/10 transition z-20">
               <X className="w-5 h-5" />
             </button>
 
-            {/* Spin sequence badge */}
-            <div className="relative inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#8B5CF6]/25 border border-[#C4B5FD]/35 text-xs sm:text-sm font-mono uppercase tracking-widest text-[#C4B5FD] mb-5">
-              <Sparkles className="w-4 h-4 text-[#A855F7]" />
-              <span>Lucky Draw Winner #{winner.spinSequenceNumber}</span>
-            </div>
-
-            {/* Trophy icon */}
-            <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-[#8B5CF6] to-[#A855F7] p-0.5 mx-auto mb-5 shadow-purple-glow">
-              <div className="w-full h-full bg-[#151027] rounded-[14px] flex items-center justify-center">
-                <Award className="w-9 h-9 sm:w-11 sm:h-11 text-[#C4B5FD]" />
+            <div className="p-6 sm:p-10">
+              {/* Spin number badge */}
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-mono font-bold uppercase tracking-widest mb-6"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(139,92,246,0.3), rgba(168,85,247,0.2))',
+                  border: '1px solid rgba(196,181,253,0.4)',
+                  color: '#DDD6FE',
+                }}>
+                ✨ Lucky Draw Winner #{winner.spinSequenceNumber}
               </div>
-            </div>
 
-            {/* CONGRATULATIONS! Heading */}
-            <h2
-              id="winner-modal-heading"
-              className="text-xl sm:text-3xl font-extrabold uppercase tracking-[0.16em] text-[#C4B5FD] mb-3"
-            >
-              CONGRATULATIONS!
-            </h2>
-
-            {/* Selected Student Name (Projector-Grade Typography) */}
-            <div className="my-5 px-4 py-5 sm:py-7 rounded-2xl bg-[#090714]/70 border border-[#C4B5FD]/25 shadow-inner">
-              <p
-                data-testid="winner-modal-name"
-                className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight break-words leading-tight"
+              {/* CONGRATULATIONS text */}
+              <motion.h2
+                id="winner-modal-heading"
+                initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.4 }}
+                className="text-2xl sm:text-4xl font-black uppercase tracking-[0.2em] mb-5"
+                style={{
+                  background: 'linear-gradient(135deg, #FBBF24 0%, #F472B6 50%, #A78BFA 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
               >
-                {winner.winnerName}
+                CONGRATULATIONS!
+              </motion.h2>
+
+              {/* Trophy emoji burst */}
+              <motion.div
+                initial={prefersReducedMotion ? {} : { scale: 0, rotate: -20 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ delay: 0.15, type: 'spring', stiffness: 320, damping: 14 }}
+                className="text-5xl sm:text-8xl mb-5"
+              >
+                🏆
+              </motion.div>
+
+              {/* Winner Name — the star of the show */}
+              <motion.div
+                initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.22, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                className="my-6 mx-auto px-6 py-6 sm:py-8 rounded-2xl max-w-xl"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(139,92,246,0.25), rgba(168,85,247,0.15), rgba(219,39,119,0.1))',
+                  border: '2px solid rgba(196,181,253,0.5)',
+                  boxShadow: '0 0 60px rgba(139,92,246,0.4), 0 0 30px rgba(236,72,153,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
+                }}
+              >
+                <p data-testid="winner-modal-name"
+                  className="text-3xl sm:text-5xl md:text-6xl font-black text-white tracking-tight break-words leading-tight">
+                  {winner.winnerName}
+                </p>
+              </motion.div>
+
+              <motion.p
+                className="text-base sm:text-xl font-semibold mb-1"
+                style={{ color: '#DDD6FE' }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }}
+              >
+                You are our lucky winner!
+              </motion.p>
+              <p className="text-xs font-mono text-violet-300/50 mb-8">
+                AWS Student Builder Group — COMSATS University Islamabad •{' '}
+                {new Date(winner.selectedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </p>
-            </div>
 
-            <p className="text-base sm:text-xl font-medium text-[#A9A3BE] mb-2">
-              You are our lucky winner!
-            </p>
-            <p className="text-xs font-mono text-[#C4B5FD]/70 mb-8">
-              AWS Student Builder Group — COMSATS University Islamabad • Selected at{' '}
-              {new Date(winner.selectedAt).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-              })}
-            </p>
-
-            {/* Modal Actions */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
-              <button
-                type="button"
-                data-testid="winner-spin-again-btn"
-                onClick={onSpinAgain}
-                disabled={!canSpinAgain}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl font-extrabold text-base sm:text-lg bg-gradient-to-r from-[#8B5CF6] via-[#A855F7] to-[#8B5CF6] text-white shadow-purple-glow hover:brightness-110 active:scale-[0.98] transition disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <RotateCw className="w-5 h-5" />
-                <span>Spin Again</span>
-              </button>
-
-              <button
-                type="button"
-                data-testid="winner-close-btn"
-                onClick={onClose}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl font-bold text-base sm:text-lg bg-[#151027] hover:bg-[#1B1530] text-[#C4B5FD] border border-[#C4B5FD]/30 transition"
-              >
-                <span>Close</span>
-              </button>
+              {/* Action buttons */}
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+                <button type="button" data-testid="winner-spin-again-btn" onClick={onSpinAgain}
+                  disabled={!canSpinAgain}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl font-black text-base sm:text-lg text-white transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{
+                    background: 'linear-gradient(135deg, #7C3AED, #A855F7, #DB2777)',
+                    boxShadow: '0 0 40px rgba(139,92,246,0.6)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                  }}>
+                  <RotateCw className="w-5 h-5" />
+                  Spin Again
+                </button>
+                <button type="button" data-testid="winner-close-btn" onClick={onClose}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl font-bold text-base sm:text-lg text-violet-300 bg-white/5 border border-white/10 hover:bg-white/10 transition">
+                  Close
+                </button>
+              </div>
             </div>
           </motion.div>
         </div>

@@ -43,3 +43,15 @@
   3. Executed `npm run test` (`vitest run`): all 20 unit and component integration tests across `cryptoRandom.test.ts`, `participantService.test.ts`, and `App.test.tsx` passed.
   4. Configured Playwright E2E suite against the production preview server (`127.0.0.1:4173`) with `waitUntil: 'domcontentloaded'` so external font/CDN latency never stalls test navigation; executed `npm run test:e2e` and verified 2/2 E2E suites passed across `360px`, `390px`, `768px`, `1024px`, `1440px`, and `1920px` viewports with zero horizontal overflow.
   5. Verified zero secrets or credentials exist in tracked files and pushed the repository to `https://github.com/ranaaalihaider/spinwheel.git`.
+
+---
+
+## Log Entry 5 — Phase 13: UI Visual Overhaul (v2), Race Condition Fix & Full Re-Verification
+- **Timestamp**: `2026-11-24T02:36:00+05:00`
+- **Problem Addressed**: Organizer feedback noted the initial dark-monochrome wheel and layout felt too subtle and basic for a live auditorium projector.
+- **Completed Work**:
+  1. **Wheel Visual Overhaul (`SpinWheelCanvas.tsx`)**: Replaced the monochrome purple segments with a bold, high-contrast 10-color palette (violet, pink, amber, emerald, blue, red, royal purple, cyan, orange, indigo) with radial slice depth gradients, conic metallic multi-color bezel, 36 live-chasing LED lights (idle chase, fast spin, winner celebration), rotating rainbow outer halo, improved label positioning with `maxWidth` hub protection, and upright seam-free rendering when only 1 participant remains.
+  2. **Stage Atmosphere & Components**: Upgraded `AmbientBackground.tsx` with drifting canvas color orbs, twinkling stars, and stage spotlights; enhanced `App.tsx` with rainbow gradient hero typography and an animated shimmer `"SPIN THE WHEEL"` CTA; refreshed `SplashScreen.tsx`, `Header.tsx`, `WinnerHistoryCard.tsx`, `WinnerModal.tsx`, and upgraded `ConfettiOverlay.tsx` to a 160-piece 3-cannon celebration.
+  3. **Concurrency Bug Fix (`useLuckyDraw.ts`)**: Added monotonic `fetchEpochRef` tracking so an in-flight Google Sheets fetch cannot overwrite Sandbox Mode data if the organizer switches modes before the initial network request completes.
+  4. **Verification**: Confirmed `npm run build` (`tsc -b && vite build`), `npm run test` (20/20 Vitest tests), and `npm run test:e2e` (2/2 Playwright suites across `360px`–`1920px` viewports) all pass with zero errors.
+  5. **Deployment**: Committed all verified changes locally on `main`; ready for `git push origin main` (GitHub authentication required) to trigger automatic AWS Amplify redeployment to `https://main.d2jqacu1gnle29.amplifyapp.com`.

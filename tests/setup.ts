@@ -34,6 +34,11 @@ if (typeof window !== 'undefined' && typeof window.ResizeObserver === 'undefined
   window.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
 }
 
+// Polyfill scrollTo for jsdom (used internally by Framer Motion)
+if (typeof window !== 'undefined') {
+  window.scrollTo = () => {};
+}
+
 // Quietly stub HTMLCanvasElement.prototype.getContext in jsdom unit tests
 if (typeof HTMLCanvasElement !== 'undefined') {
   HTMLCanvasElement.prototype.getContext = (() => null) as unknown as typeof HTMLCanvasElement.prototype.getContext;

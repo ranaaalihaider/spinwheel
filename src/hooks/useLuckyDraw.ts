@@ -61,6 +61,7 @@ export function useLuckyDraw(options: UseLuckyDrawOptions = {}) {
   const [latestWinner, setLatestWinner] = useState<WinnerRecord | null>(null);
 
   const isSpinningRef = useRef<boolean>(false);
+  const fetchEpochRef = useRef<number>(0);
 
   // Sync mute state with sound service
   useEffect(() => {
@@ -119,6 +120,7 @@ export function useLuckyDraw(options: UseLuckyDrawOptions = {}) {
         return;
       }
 
+      const requestEpoch = ++fetchEpochRef.current;
       setIsRefreshing(true);
       if (allParticipants.length === 0) {
         setConnectionState('loading');
@@ -126,6 +128,10 @@ export function useLuckyDraw(options: UseLuckyDrawOptions = {}) {
 
       try {
         const result = await fetchLiveParticipants();
+        // Discard stale response if user switched modes or triggered a newer refresh mid-flight
+        if (requestEpoch !== fetchEpochRef.current) {
+          return;
+        }
         setAllParticipants(result.participants);
         setLiveBackupParticipants(result.participants);
         setDiagnostics(result.diagnostics);
@@ -134,6 +140,9 @@ export function useLuckyDraw(options: UseLuckyDrawOptions = {}) {
         setActiveSpinPlan(null);
         setConnectionState(result.participants.length > 0 ? 'connected' : 'empty');
       } catch (err) {
+        if (requestEpoch !== fetchEpochRef.current) {
+          return;
+        }
         const message =
           err instanceof Error
             ? err.message
@@ -152,7 +161,9 @@ export function useLuckyDraw(options: UseLuckyDrawOptions = {}) {
           }
         });
       } finally {
-        setIsRefreshing(false);
+        if (requestEpoch === fetchEpochRef.current) {
+          setIsRefreshing(false);
+        }
       }
     },
     [allParticipants.length, liveBackupParticipants, settings.sandboxCohortSize, settings.sandboxMode]
@@ -281,6 +292,9 @@ export function useLuckyDraw(options: UseLuckyDrawOptions = {}) {
       }));
 
       if (enabled) {
+        // Invalidate any in-flight live Google Sheets request so it cannot overwrite sandbox data
+        fetchEpochRef.current += 1;
+        setIsRefreshing(false);
         const sandboxResult = generateSandboxParticipants(nextSize);
         setAllParticipants(sandboxResult.participants);
         setDiagnostics(sandboxResult.diagnostics);

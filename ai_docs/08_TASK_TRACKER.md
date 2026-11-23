@@ -82,3 +82,11 @@
 - [x] Create `.gitignore`, `.env.example`, `amplify.yml`, and comprehensive `README.md`
 - [x] Run production build (`npm run build`) and verify `dist/` output
 - [x] Commit and push clean repository to `https://github.com/ranaaalihaider/spinwheel.git`
+
+## Phase 13 — UI Visual Overhaul (v2) & Polish
+- [x] Upgrade `SpinWheelCanvas.tsx` to vibrant 10-color projector-safe palette, conic metallic bezel, 36 live-chasing LED dots, rotating rainbow halo, crisp outlined labels with hub collision guards, and graceful single-participant rendering
+- [x] Upgrade `AmbientBackground.tsx` with drifting translucent ambient orbs, twinkling starfield canvas, and multi-angle stage spotlights
+- [x] Redesign `App.tsx`, `Header.tsx`, `SplashScreen.tsx`, `WinnerModal.tsx`, `ConfettiOverlay.tsx`, and `WinnerHistoryCard.tsx` with glassmorphism, rainbow accents, shimmer CTA button, and 3-cannon confetti celebration
+- [x] Fix async fetch race condition in `useLuckyDraw.ts` so in-flight live sheet syncs never overwrite Sandbox Mode
+- [x] Re-verify full build (`npm run build`), Vitest unit tests (20/20), and Playwright E2E tests (2/2 across 6 viewports)
+- [ ] Push UI overhaul commit to `main` branch to trigger AWS Amplify auto-redeployment (requires GitHub authentication)
