@@ -26,18 +26,13 @@ The aesthetic is **AWS Cloud Club Midnight Violet** — engineered for both clos
 | `--status-amber` | `#F59E0B` | `rgb(245, 158, 11)` | Stale cache / fallback warning |
 | `--status-rose` | `#F43F5E` | `rgb(244, 63, 94)` | Destructive reset confirmation / connection error |
 
-### Wheel Segment Multi-Color High-Contrast Palette (UI Overhaul v2)
-Following organizer visual review on projector screens, the wheel was upgraded from a monochrome purple cycle to a bold, projector-safe 10-color spectrum with per-slice radial depth gradients and crisp white outlined labels:
-1. **Violet**: `#7C3AED` (highlight `#A78BFA`)
-2. **Pink**: `#DB2777` (highlight `#F9A8D4`)
-3. **Amber**: `#D97706` (highlight `#FCD34D`)
-4. **Emerald**: `#059669` (highlight `#6EE7B7`)
-5. **Blue**: `#2563EB` (highlight `#93C5FD`)
-6. **Red**: `#DC2626` (highlight `#FCA5A5`)
-7. **Royal Purple**: `#7E22CE` (highlight `#D8B4FE`)
-8. **Cyan**: `#0891B2` (highlight `#67E8F9`)
-9. **Orange**: `#EA580C` (highlight `#FDBA74`)
-10. **Indigo**: `#4F46E5` (highlight `#A5B4FC`)
+### Wheel Segment Alternating Purple Palette (Finalized Design Reference v3)
+Aligned with `public/assets/design-reference.png`, the wheel uses a refined high-contrast alternating purple spectrum with radial depth gradients, glowing lavender outer rim, fixed golden 12 o'clock pointer, and golden-rimmed AWS center hub:
+1. **Luminous Orchid Purple**: `#7C3AED` → `#8B4BF6` → `#A855F7`
+2. **Deep Cosmic Violet**: `#1F0D42` → `#2E145C` → `#431D7F`
+3. **Odd-Slice Bridge Amethyst** *(used on slice `N-1` when `N > 1` is odd so adjacent slices never match)*: `#431987` → `#5B24B4` → `#7434D8`
+
+Labels are auto-oriented by hemisphere (flipped 180° on the left half of the wheel) so every participant name reads right-side up and stays centered inside its segment without touching the center hub or outer ring.
 
 ---
 
@@ -71,6 +66,7 @@ Following organizer visual review on projector screens, the wheel was upgraded f
 
 ## 5. Layout, Elevation & Microinteractions
 
-- **Ambient Lighting**: Deep obsidian-violet backdrop (`#060412` → `#150D2E`) layered with crown/side ambient spotlights, subtle dot-grid texture, and a live HTML5 Canvas background rendering drifting translucent color orbs and twinkling stars (respects `prefers-reduced-motion`).
-- **Wheel Outer Ring**: Conic metallic multi-color bezel with 36 perimeter LED indicator dots that chase softly when idle, accelerate during spins, and sparkle upon winner reveal, backed by a rotating rainbow halo glow.
-- **Fixed Pointer**: Prominent **top-center (12 o'clock) fuchsia-violet jewelled pointer** with outer glow and spring deflection bounce as each slice peg passes beneath it.
+- **Stage Backdrop**: Real COMSATS University Islamabad campus photograph (`public/assets/comsats-campus.png`, letterbox-trimmed to 16:9) graded into deep midnight violet (`#080515`) with vertical and radial dark gradient overlays for readability, sweeping purple-and-gold SVG neon silk ribbons, and subtle floating particles (`prefers-reduced-motion` aware).
+- **Layout Architecture**: Three-column desktop stage (Left: `Let the Wheel Decide!` hero with golden curve underline, stat tiles, & primary Spin button | Center: Illuminated wheel & sculpted metallic-violet pedestal with golden light bar | Right: Glassmorphic `Lucky Draw` info & winner history card), automatically reordering on tablet/mobile so the wheel and Spin CTA lead the viewport with zero horizontal scrolling.
+- **Wheel Outer Ring**: Dark metallic bezel framed by a crisp glowing lavender-white neon rim and 12 illuminated perimeter light segments, resting on a 3D stage pedestal with a golden accent light bar.
+- **Fixed Pointer**: Sculpted metallic-gold 12 o'clock downward pointer (`#FEF08A → #F59E0B → #D97706`) with warm amber halo, bevel highlight, jewel pin, and smooth spring deflection as each slice peg passes beneath it.

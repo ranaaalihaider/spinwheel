@@ -3,6 +3,7 @@ import { ActiveSpinPlan, DrawStatus, Participant } from '../../types';
 import {
   evaluateWheelEasing,
   getSliceIndexAtPointer,
+  normalizeAngle,
   TWO_PI,
 } from '../../utils/cryptoRandom';
 import { soundService } from '../../services/soundService';
@@ -16,22 +17,38 @@ interface SpinWheelCanvasProps {
   onSpinComplete: () => void;
 }
 
-// Bold 10-color palette — maximum contrast, projector-safe, eye-catching
-const SLICE_PALETTE = [
-  { bg: '#7C3AED', light: '#A78BFA', dark: '#4C1D95', text: '#FFFFFF' }, // Violet
-  { bg: '#DB2777', light: '#F9A8D4', dark: '#831843', text: '#FFFFFF' }, // Pink
-  { bg: '#D97706', light: '#FCD34D', dark: '#78350F', text: '#FFFFFF' }, // Amber
-  { bg: '#059669', light: '#6EE7B7', dark: '#064E3B', text: '#FFFFFF' }, // Emerald
-  { bg: '#2563EB', light: '#93C5FD', dark: '#1E3A8A', text: '#FFFFFF' }, // Blue
-  { bg: '#DC2626', light: '#FCA5A5', dark: '#7F1D1D', text: '#FFFFFF' }, // Red
-  { bg: '#7E22CE', light: '#D8B4FE', dark: '#3B0764', text: '#FFFFFF' }, // Purple
-  { bg: '#0891B2', light: '#67E8F9', dark: '#164E63', text: '#FFFFFF' }, // Cyan
-  { bg: '#EA580C', light: '#FDBA74', dark: '#7C2D12', text: '#FFFFFF' }, // Orange
-  { bg: '#4F46E5', light: '#A5B4FC', dark: '#1E1B4B', text: '#FFFFFF' }, // Indigo
-];
+interface SliceTone {
+  inner: string;
+  mid: string;
+  outer: string;
+}
 
-function getSliceTheme(index: number) {
-  return SLICE_PALETTE[index % SLICE_PALETTE.length];
+// Refined alternating Midnight Violet & Luminous Orchid Purple palette (matches finalized design reference)
+const LIGHT_PURPLE_SLICE: SliceTone = {
+  inner: '#7C3AED',
+  mid: '#8B4BF6',
+  outer: '#A855F7',
+};
+
+const DARK_PURPLE_SLICE: SliceTone = {
+  inner: '#1F0D42',
+  mid: '#2E145C',
+  outer: '#431D7F',
+};
+
+const ODD_BRIDGE_SLICE: SliceTone = {
+  inner: '#431987',
+  mid: '#5B24B4',
+  outer: '#7434D8',
+};
+
+function getSliceTone(index: number, totalSlices: number): SliceTone {
+  if (totalSlices === 1) return LIGHT_PURPLE_SLICE;
+  // Prevent first and last segment from sharing the same shade when totalSlices is odd
+  if (totalSlices % 2 === 1 && index === totalSlices - 1) {
+    return ODD_BRIDGE_SLICE;
+  }
+  return index % 2 === 0 ? LIGHT_PURPLE_SLICE : DARK_PURPLE_SLICE;
 }
 
 function truncateLabel(text: string, maxChars: number): string {
@@ -49,7 +66,7 @@ export const SpinWheelCanvas: React.FC<SpinWheelCanvasProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [canvasSize, setCanvasSize] = useState<number>(500);
+  const [canvasSize, setCanvasSize] = useState<number>(480);
 
   const animatedRotationRef = useRef<number>(rotation);
   const pointerDeflectionRef = useRef<number>(0);
@@ -57,7 +74,9 @@ export const SpinWheelCanvas: React.FC<SpinWheelCanvasProps> = ({
   const glowPulseRef = useRef<number>(0);
   const onSpinCompleteRef = useRef(onSpinComplete);
 
-  useEffect(() => { onSpinCompleteRef.current = onSpinComplete; }, [onSpinComplete]);
+  useEffect(() => {
+    onSpinCompleteRef.current = onSpinComplete;
+  }, [onSpinComplete]);
 
   useEffect(() => {
     if (drawStatus !== 'spinning') {
@@ -70,8 +89,8 @@ export const SpinWheelCanvas: React.FC<SpinWheelCanvasProps> = ({
     if (!el) return;
     const updateSize = () => {
       const rect = el.getBoundingClientRect();
-      const width = rect.width || 400;
-      const clamped = Math.max(300, Math.min(620, Math.floor(width)));
+      const width = rect.width || 360;
+      const clamped = Math.max(280, Math.min(540, Math.floor(width)));
       setCanvasSize(clamped);
     };
     updateSize();
@@ -85,11 +104,20 @@ export const SpinWheelCanvas: React.FC<SpinWheelCanvasProps> = ({
     }
   }, []);
 
-  const renderWheelFrame = (currentAngle: number, pointerDeflection: number, ledPhase: number, glowPulse: number) => {
+  const renderWheelFrame = (
+    currentAngle: number,
+    pointerDeflection: number,
+    ledPhase: number,
+    glowPulse: number
+  ) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     let ctx: CanvasRenderingContext2D | null = null;
-    try { ctx = canvas.getContext('2d'); } catch { ctx = null; }
+    try {
+      ctx = canvas.getContext('2d');
+    } catch {
+      ctx = null;
+    }
     if (!ctx) return;
 
     const dpr = typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2) : 1;
@@ -105,145 +133,126 @@ export const SpinWheelCanvas: React.FC<SpinWheelCanvasProps> = ({
 
     const cx = canvasSize / 2;
     const cy = canvasSize / 2;
-    const outerRadius = canvasSize / 2 - 14;
-    const bezelWidth = Math.max(18, Math.floor(canvasSize * 0.055));
+    const outerRadius = canvasSize / 2 - 16;
+    const bezelWidth = Math.max(13, Math.floor(canvasSize * 0.036));
     const wheelRadius = outerRadius - bezelWidth;
-    const hubRadius = Math.max(40, Math.floor(wheelRadius * 0.21));
+    const hubRadius = Math.max(38, Math.floor(wheelRadius * 0.22));
     const isSpinning = drawStatus === 'spinning';
+    const isCelebrating = drawStatus === 'winner_revealed';
 
-    // === OUTER GLOW HALOS ===
-    // Multi-layer glow rings
-    const glowColors = isSpinning
-      ? ['rgba(168,85,247,0.6)', 'rgba(236,72,153,0.4)', 'rgba(59,130,246,0.3)']
-      : ['rgba(139,92,246,0.4)', 'rgba(168,85,247,0.2)', 'rgba(109,40,217,0.15)'];
-    const glowSizes = [outerRadius + 24 + glowPulse * 8, outerRadius + 14, outerRadius + 6];
-
-    for (let g = 0; g < 3; g++) {
-      const gGrad = ctx.createRadialGradient(cx, cy, outerRadius - 4, cx, cy, glowSizes[g]);
-      gGrad.addColorStop(0, glowColors[g]);
-      gGrad.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(cx, cy, glowSizes[g], 0, TWO_PI);
-      ctx.fillStyle = gGrad;
-      ctx.fill();
-      ctx.restore();
-    }
-
-    // === OUTER CHROME BEZEL ===
-    // Shadow ring behind bezel
+    // === 1. SOFT OUTER ILLUMINATED HALO ===
     ctx.save();
+    const haloGrad = ctx.createRadialGradient(
+      cx,
+      cy,
+      outerRadius - 8,
+      cx,
+      cy,
+      outerRadius + 16
+    );
+    haloGrad.addColorStop(
+      0,
+      isSpinning
+        ? `rgba(192,132,252,${0.65 + glowPulse * 0.18})`
+        : isCelebrating
+        ? 'rgba(251,191,36,0.55)'
+        : 'rgba(168,85,247,0.48)'
+    );
+    haloGrad.addColorStop(1, 'rgba(139,92,246,0)');
     ctx.beginPath();
-    ctx.arc(cx, cy, outerRadius + 2, 0, TWO_PI);
-    ctx.shadowColor = isSpinning ? 'rgba(168,85,247,1)' : 'rgba(139,92,246,0.7)';
-    ctx.shadowBlur = isSpinning ? 30 + glowPulse * 15 : 20;
-    ctx.fillStyle = 'rgba(0,0,0,0)';
+    ctx.arc(cx, cy, outerRadius + 16, 0, TWO_PI);
+    ctx.fillStyle = haloGrad;
     ctx.fill();
     ctx.restore();
 
-    // Bezel with metallic conic gradient
-    const bezelGrad = ctx.createConicGradient(-Math.PI / 4, cx, cy);
-    bezelGrad.addColorStop(0.00, '#7C3AED');
-    bezelGrad.addColorStop(0.10, '#C4B5FD');
-    bezelGrad.addColorStop(0.20, '#4C1D95');
-    bezelGrad.addColorStop(0.35, '#DB2777');
-    bezelGrad.addColorStop(0.45, '#F9A8D4');
-    bezelGrad.addColorStop(0.55, '#D97706');
-    bezelGrad.addColorStop(0.65, '#FCD34D');
-    bezelGrad.addColorStop(0.75, '#059669');
-    bezelGrad.addColorStop(0.85, '#6EE7B7');
-    bezelGrad.addColorStop(0.90, '#2563EB');
-    bezelGrad.addColorStop(1.00, '#7C3AED');
+    // === 2. DARK METALLIC OUTER BEZEL ===
+    const bezelGrad = ctx.createLinearGradient(cx - outerRadius, cy - outerRadius, cx + outerRadius, cy + outerRadius);
+    bezelGrad.addColorStop(0, '#3B1E6E');
+    bezelGrad.addColorStop(0.5, '#190C33');
+    bezelGrad.addColorStop(1, '#4C258C');
 
     ctx.beginPath();
     ctx.arc(cx, cy, outerRadius, 0, TWO_PI);
     ctx.fillStyle = bezelGrad;
     ctx.fill();
 
-    // Inner edge of bezel (dark ring)
+    // Luminous violet-white outer neon rim ring
+    ctx.save();
     ctx.beginPath();
-    ctx.arc(cx, cy, wheelRadius + bezelWidth * 0.3, 0, TWO_PI);
-    ctx.lineWidth = bezelWidth * 0.5;
-    ctx.strokeStyle = 'rgba(10,5,25,0.9)';
+    ctx.arc(cx, cy, outerRadius - 1.5, 0, TWO_PI);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = isCelebrating ? '#FDE68A' : '#E9D5FF';
+    ctx.shadowColor = isCelebrating ? '#F59E0B' : '#C084FC';
+    ctx.shadowBlur = isSpinning ? 18 + glowPulse * 6 : 12;
+    ctx.stroke();
+    ctx.restore();
+
+    // Subtle inner dark groove on bezel
+    ctx.beginPath();
+    ctx.arc(cx, cy, wheelRadius + bezelWidth * 0.48, 0, TWO_PI);
+    ctx.lineWidth = Math.max(2, bezelWidth * 0.35);
+    ctx.strokeStyle = 'rgba(10,5,24,0.85)';
     ctx.stroke();
 
-    // Bezel outer rim highlight
-    ctx.beginPath();
-    ctx.arc(cx, cy, outerRadius - 1, 0, TWO_PI);
-    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    // === 3. ILLUMINATED PERIMETER LIGHT SEGMENTS (matching reference's sleek glowing bezel) ===
+    const lightArcCount = 12;
+    const lightOrbit = outerRadius - bezelWidth * 0.5;
+    for (let i = 0; i < lightArcCount; i++) {
+      const a = (i * TWO_PI) / lightArcCount;
+      const isCardinal = i % 3 === 0;
+      const pulse = 0.55 + 0.45 * Math.sin(ledPhase * 0.65 + i * 0.85);
+      const isBright = isCardinal || pulse > 0.72;
 
-    // === LED DOTS ON BEZEL ===
-    const ledCount = 36;
-    const ledOrbit = outerRadius - bezelWidth / 2;
-    for (let i = 0; i < ledCount; i++) {
-      const ledAngle = (i * TWO_PI) / ledCount;
-      const lx = cx + Math.cos(ledAngle) * ledOrbit;
-      const ly = cy + Math.sin(ledAngle) * ledOrbit;
-      const cyclePos = (ledPhase * 0.5 + i) % ledCount;
-      const isLit = cyclePos % 2.5 < 1.8;
-      const paletteIdx = Math.floor((ledPhase / 3 + i * 0.5)) % SLICE_PALETTE.length;
-      const ledColor = isLit ? SLICE_PALETTE[paletteIdx].light : 'rgba(80,60,120,0.3)';
-      const ledR = isLit ? 3.5 : 2;
-
+      ctx.save();
       ctx.beginPath();
-      ctx.arc(lx, ly, ledR, 0, TWO_PI);
-      if (isLit) {
-        ctx.shadowColor = ledColor;
-        ctx.shadowBlur = 10;
-      } else {
-        ctx.shadowBlur = 0;
+      const span = isCardinal ? 0.14 : 0.055;
+      ctx.arc(cx, cy, lightOrbit, a - span, a + span);
+      ctx.lineCap = 'round';
+      ctx.lineWidth = isCardinal ? 3.5 : 2.5;
+      const color = isCelebrating
+        ? '#FDE68A'
+        : isBright
+        ? '#F5D0FE'
+        : 'rgba(196,181,253,0.45)';
+      ctx.strokeStyle = color;
+      if (isBright) {
+        ctx.shadowColor = isCelebrating ? '#F59E0B' : '#D8B4FE';
+        ctx.shadowBlur = isCardinal ? 12 : 7;
       }
-      ctx.fillStyle = ledColor;
-      ctx.fill();
-      ctx.shadowBlur = 0;
+      ctx.stroke();
+      ctx.restore();
     }
 
-    // === WHEEL SEGMENTS ===
+    // === 4. WHEEL SEGMENTS ===
     const totalSlices = slices.length;
 
     if (totalSlices === 0) {
-      // Empty wheel placeholder
-      const emptyGrad = ctx.createRadialGradient(cx, cy, hubRadius, cx, cy, wheelRadius);
-      emptyGrad.addColorStop(0, '#1E0D4E');
-      emptyGrad.addColorStop(0.6, '#0F0629');
-      emptyGrad.addColorStop(1, '#060412');
-      ctx.beginPath();
-      ctx.arc(cx, cy, wheelRadius, 0, TWO_PI);
-      ctx.fillStyle = emptyGrad;
-      ctx.fill();
-
-      // Dashed spokes
-      for (let i = 0; i < 8; i++) {
-        const a = (i * TWO_PI) / 8;
+      // Empty wheel state — refined dark alternating purple placeholder slices
+      const placeholderCount = 8;
+      const pArc = TWO_PI / placeholderCount;
+      for (let i = 0; i < placeholderCount; i++) {
+        const startA = i * pArc;
+        const endA = startA + pArc;
         ctx.beginPath();
-        ctx.setLineDash([6, 8]);
-        ctx.moveTo(cx + Math.cos(a) * hubRadius, cy + Math.sin(a) * hubRadius);
-        ctx.lineTo(cx + Math.cos(a) * wheelRadius, cy + Math.sin(a) * wheelRadius);
-        ctx.strokeStyle = 'rgba(167,139,250,0.2)';
-        ctx.lineWidth = 1.5;
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, wheelRadius, startA, endA);
+        ctx.closePath();
+        ctx.fillStyle = i % 2 === 0 ? '#27124C' : '#180A33';
+        ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(196,181,253,0.12)';
         ctx.stroke();
-        ctx.setLineDash([]);
       }
-
-      // Center text
-      ctx.font = `bold ${Math.max(12, wheelRadius * 0.07)}px sans-serif`;
-      ctx.fillStyle = 'rgba(167,139,250,0.4)';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('No participants', cx, cy);
     } else {
       const sliceArc = TWO_PI / totalSlices;
       const activeIdx = getSliceIndexAtPointer(currentAngle, totalSlices);
 
-      // === DRAW SEGMENTS ===
       for (let i = 0; i < totalSlices; i++) {
         const startAngle = currentAngle + i * sliceArc;
         const endAngle = startAngle + sliceArc;
         const midAngle = startAngle + sliceArc / 2;
-        const theme = getSliceTheme(i);
-        const isActive = i === activeIdx && drawStatus === 'winner_revealed';
+        const tone = getSliceTone(i, totalSlices);
+        const isWinningSlice = i === activeIdx && isCelebrating;
 
         ctx.save();
         ctx.beginPath();
@@ -251,223 +260,226 @@ export const SpinWheelCanvas: React.FC<SpinWheelCanvasProps> = ({
         ctx.arc(cx, cy, wheelRadius, startAngle, endAngle);
         ctx.closePath();
 
-        // Layered radial gradient — bright center, rich dark edge
-        const innerX = cx + Math.cos(midAngle) * hubRadius * 1.1;
-        const innerY = cy + Math.sin(midAngle) * hubRadius * 1.1;
+        // Rich radial depth gradient per slice
+        const innerX = cx + Math.cos(midAngle) * hubRadius;
+        const innerY = cy + Math.sin(midAngle) * hubRadius;
         const outerX = cx + Math.cos(midAngle) * wheelRadius;
         const outerY = cy + Math.sin(midAngle) * wheelRadius;
 
         const sliceGrad = ctx.createLinearGradient(innerX, innerY, outerX, outerY);
-        sliceGrad.addColorStop(0.0, theme.light + 'CC');
-        sliceGrad.addColorStop(0.3, theme.bg + 'FF');
-        sliceGrad.addColorStop(0.7, theme.bg + 'EE');
-        sliceGrad.addColorStop(1.0, theme.dark + 'CC');
+        sliceGrad.addColorStop(0.0, tone.inner);
+        sliceGrad.addColorStop(0.55, tone.mid);
+        sliceGrad.addColorStop(1.0, tone.outer);
 
         ctx.fillStyle = sliceGrad;
         ctx.fill();
 
-        // Winner golden shimmer
-        if (isActive) {
-          ctx.fillStyle = 'rgba(255,215,0,0.25)';
+        // Warm golden-lavender sheen on the winning slice upon reveal
+        if (isWinningSlice) {
+          ctx.fillStyle = `rgba(253,230,138,${0.18 + Math.abs(glowPulse) * 0.1})`;
           ctx.fill();
-          ctx.shadowColor = '#FFD700';
-          ctx.shadowBlur = 30;
-          ctx.fillStyle = 'rgba(255,255,255,0.15)';
-          ctx.fill();
-          ctx.shadowBlur = 0;
         }
 
-        // Segment divider line (omit awkward radial seam when only 1 participant remains)
+        // Crisp subtle slice divider line (omit radial seam when only 1 participant exists)
         if (totalSlices > 1) {
-          ctx.lineWidth = totalSlices > 30 ? 1 : 2;
-          ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+          ctx.lineWidth = totalSlices > 32 ? 0.8 : 1.4;
+          ctx.strokeStyle = 'rgba(233,213,255,0.22)';
           ctx.stroke();
         }
-
-        // Edge arc highlight (brighter outer edge)
-        ctx.beginPath();
-        ctx.arc(cx, cy, wheelRadius - 2, startAngle, endAngle);
-        ctx.lineWidth = totalSlices > 30 ? 1 : 2.5;
-        ctx.strokeStyle = theme.light + '66';
-        ctx.stroke();
-
         ctx.restore();
 
-        // === LABEL ===
+        // === 5. CRISP, RIGHT-SIDE-UP SEGMENT NAME LABELS ===
         ctx.save();
         ctx.translate(cx, cy);
-        ctx.rotate(totalSlices === 1 ? -Math.PI / 2 : midAngle);
 
         const fontSize =
-          totalSlices <= 4  ? Math.max(18, Math.floor(wheelRadius * 0.10)) :
-          totalSlices <= 8  ? Math.max(16, Math.floor(wheelRadius * 0.085)) :
-          totalSlices <= 14 ? Math.max(14, Math.floor(wheelRadius * 0.072)) :
-          totalSlices <= 24 ? Math.max(12, Math.floor(wheelRadius * 0.058)) :
-          totalSlices <= 36 ? Math.max(10, Math.floor(wheelRadius * 0.048)) :
-                              Math.max(9,  Math.floor(wheelRadius * 0.040));
+          totalSlices <= 6
+            ? Math.max(17, Math.floor(wheelRadius * 0.095))
+            : totalSlices <= 10
+            ? Math.max(15, Math.floor(wheelRadius * 0.082))
+            : totalSlices <= 16
+            ? Math.max(13, Math.floor(wheelRadius * 0.068))
+            : totalSlices <= 28
+            ? Math.max(11, Math.floor(wheelRadius * 0.055))
+            : Math.max(9, Math.floor(wheelRadius * 0.043));
 
-        const maxChars = totalSlices <= 10 ? 22 : totalSlices <= 20 ? 18 : totalSlices <= 36 ? 14 : 11;
+        const maxChars =
+          totalSlices <= 8 ? 18 : totalSlices <= 16 ? 15 : totalSlices <= 32 ? 12 : 10;
         const label = truncateLabel(slices[i].name, maxChars);
-        const textRadius = totalSlices === 1 ? wheelRadius * 0.62 : wheelRadius * 0.87;
-        const maxTextWidth = Math.max(40, wheelRadius * 0.87 - hubRadius - 18);
+        const midRadius = hubRadius + (wheelRadius - hubRadius) * 0.50;
+        const maxTextWidth = Math.max(38, (wheelRadius - hubRadius) * 0.68);
 
-        ctx.font = `800 ${fontSize}px "Plus Jakarta Sans", "Inter", sans-serif`;
-        ctx.textAlign = totalSlices === 1 ? 'center' : 'right';
+        ctx.font = `700 ${fontSize}px "Plus Jakarta Sans", "Inter", sans-serif`;
+        ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
         if (totalSlices === 1) {
-          // Draw cleanly upright in the top half when 1 participant remains
-          ctx.rotate(Math.PI / 2);
-          ctx.fillStyle = 'rgba(0,0,0,0.75)';
-          ctx.fillText(label, 2, -textRadius + 2, wheelRadius * 1.3);
-          ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-          ctx.lineWidth = 3;
-          ctx.lineJoin = 'round';
-          ctx.strokeText(label, 0, -textRadius, wheelRadius * 1.3);
+          // Single remaining participant: render cleanly upright in top half
+          ctx.fillStyle = 'rgba(8,4,20,0.65)';
+          ctx.fillText(label, 1.5, -midRadius + 1.5, wheelRadius * 1.25);
           ctx.fillStyle = '#FFFFFF';
-          ctx.shadowColor = 'rgba(0,0,0,0.6)';
-          ctx.shadowBlur = 4;
-          ctx.fillText(label, 0, -textRadius, wheelRadius * 1.3);
+          ctx.fillText(label, 0, -midRadius, wheelRadius * 1.25);
         } else {
-          // Drop shadow for readability
-          ctx.fillStyle = 'rgba(0,0,0,0.75)';
-          ctx.fillText(label, textRadius + 1.5, 1.5, maxTextWidth);
+          // Automatically flip text 180deg on the left hemisphere so names are NEVER upside down
+          const normMid = normalizeAngle(midAngle);
+          const isLeftHemisphere = normMid > Math.PI * 0.5 && normMid < Math.PI * 1.5;
 
-          // Subtle outline
-          ctx.strokeStyle = 'rgba(0,0,0,0.55)';
-          ctx.lineWidth = 2.5;
-          ctx.lineJoin = 'round';
-          ctx.strokeText(label, textRadius, 0, maxTextWidth);
-
-          // Main text — crisp white
-          ctx.fillStyle = '#FFFFFF';
-          ctx.shadowColor = 'rgba(0,0,0,0.6)';
-          ctx.shadowBlur = 3;
-          ctx.fillText(label, textRadius, 0, maxTextWidth);
+          if (isLeftHemisphere) {
+            ctx.rotate(midAngle + Math.PI);
+            ctx.fillStyle = 'rgba(8,4,20,0.62)';
+            ctx.fillText(label, -midRadius + 1.2, 1.2, maxTextWidth);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillText(label, -midRadius, 0, maxTextWidth);
+          } else {
+            ctx.rotate(midAngle);
+            ctx.fillStyle = 'rgba(8,4,20,0.62)';
+            ctx.fillText(label, midRadius + 1.2, 1.2, maxTextWidth);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillText(label, midRadius, 0, maxTextWidth);
+          }
         }
-        ctx.shadowBlur = 0;
         ctx.restore();
       }
 
-      // Rim segment divider dots
-      for (let i = 0; i < totalSlices; i++) {
-        const pegAngle = currentAngle + i * sliceArc;
-        const px = cx + Math.cos(pegAngle) * (wheelRadius - 4);
-        const py = cy + Math.sin(pegAngle) * (wheelRadius - 4);
-        const dotTheme = getSliceTheme(i);
-        ctx.beginPath();
-        ctx.arc(px, py, totalSlices > 36 ? 2 : 3.5, 0, TWO_PI);
-        ctx.fillStyle = '#FFFFFF';
-        ctx.shadowColor = dotTheme.light;
-        ctx.shadowBlur = 6;
-        ctx.fill();
-        ctx.shadowBlur = 0;
+      // Subtle rim peg dots at slice boundaries
+      if (totalSlices > 1) {
+        for (let i = 0; i < totalSlices; i++) {
+          const pegAngle = currentAngle + i * sliceArc;
+          const px = cx + Math.cos(pegAngle) * (wheelRadius - 4);
+          const py = cy + Math.sin(pegAngle) * (wheelRadius - 4);
+          ctx.beginPath();
+          ctx.arc(px, py, totalSlices > 36 ? 1.8 : 2.6, 0, TWO_PI);
+          ctx.fillStyle = '#F3E8FF';
+          ctx.fill();
+        }
       }
     }
 
-    // === INNER RIM HIGHLIGHT RING ===
+    // Inner rim luminous border around wheel face
     ctx.beginPath();
     ctx.arc(cx, cy, wheelRadius, 0, TWO_PI);
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = 'rgba(233,213,255,0.45)';
     ctx.stroke();
 
-    // === CENTER HUB ===
-    // Outer shadow disc
+    // === 6. CENTER HUB WITH WARM GOLDEN ILLUMINATED RING & AWS BRANDING ===
+    // Outer warm gold glow halo behind hub
     ctx.save();
     ctx.beginPath();
-    ctx.arc(cx, cy, hubRadius + 10, 0, TWO_PI);
-    ctx.shadowColor = isSpinning ? 'rgba(196,181,253,1)' : 'rgba(168,85,247,0.8)';
-    ctx.shadowBlur = isSpinning ? 30 : 20;
-    ctx.fillStyle = '#0F0629';
+    ctx.arc(cx, cy, hubRadius + 5, 0, TWO_PI);
+    ctx.shadowColor = '#F59E0B';
+    ctx.shadowBlur = isSpinning ? 24 : 18;
+    ctx.fillStyle = '#120A24';
     ctx.fill();
     ctx.restore();
 
-    // Hub gradient fill — bright purple
+    // Hub dark obsidian fill
     const hubGrad = ctx.createRadialGradient(
-      cx - hubRadius * 0.3, cy - hubRadius * 0.3, 2,
-      cx, cy, hubRadius,
+      cx - hubRadius * 0.25,
+      cy - hubRadius * 0.25,
+      2,
+      cx,
+      cy,
+      hubRadius
     );
-    hubGrad.addColorStop(0, '#C4B5FD');
-    hubGrad.addColorStop(0.3, '#A855F7');
-    hubGrad.addColorStop(0.65, '#7C3AED');
-    hubGrad.addColorStop(1, '#2D1B69');
+    hubGrad.addColorStop(0, '#271A46');
+    hubGrad.addColorStop(0.55, '#130B26');
+    hubGrad.addColorStop(1, '#090514');
     ctx.beginPath();
     ctx.arc(cx, cy, hubRadius, 0, TWO_PI);
     ctx.fillStyle = hubGrad;
     ctx.fill();
 
-    // Hub rim
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = '#E9D5FF';
-    ctx.shadowColor = '#C4B5FD';
+    // Luminous warm gold-cream outer border on center hub
+    ctx.save();
+    const hubRingGrad = ctx.createLinearGradient(
+      cx - hubRadius,
+      cy - hubRadius,
+      cx + hubRadius,
+      cy + hubRadius
+    );
+    hubRingGrad.addColorStop(0, '#FEF08A');
+    hubRingGrad.addColorStop(0.5, '#F59E0B');
+    hubRingGrad.addColorStop(1, '#FDE68A');
+    ctx.beginPath();
+    ctx.arc(cx, cy, hubRadius, 0, TWO_PI);
+    ctx.lineWidth = 3.5;
+    ctx.strokeStyle = hubRingGrad;
+    ctx.shadowColor = 'rgba(251,191,36,0.8)';
     ctx.shadowBlur = 12;
     ctx.stroke();
-    ctx.shadowBlur = 0;
+    ctx.restore();
 
-    // Hub text
-    const hubFontSize = Math.max(11, Math.floor(hubRadius * 0.38));
-    ctx.font = `900 ${hubFontSize}px "Plus Jakarta Sans", sans-serif`;
+    // Center hub AWS Student Builder Group monogram (clean, no fabricated trademark icons)
+    const hubFontSize = Math.max(13, Math.floor(hubRadius * 0.42));
+    ctx.font = `800 ${hubFontSize}px "Plus Jakarta Sans", sans-serif`;
     ctx.fillStyle = '#FFFFFF';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(0,0,0,0.6)';
-    ctx.shadowBlur = 4;
-    ctx.fillText('AWS', cx, cy - hubRadius * 0.18);
-    ctx.font = `600 ${Math.max(7, Math.floor(hubRadius * 0.26))}px "JetBrains Mono", monospace`;
-    ctx.fillStyle = '#DDD6FE';
-    ctx.fillText('CUI', cx, cy + hubRadius * 0.28);
-    ctx.shadowBlur = 0;
+    ctx.fillText('AWS', cx, cy - hubRadius * 0.14);
 
-    // === TOP POINTER (12 o'clock) ===
+    // Subtle golden accent divider arc under "AWS"
+    ctx.beginPath();
+    ctx.moveTo(cx - hubRadius * 0.36, cy + hubRadius * 0.12);
+    ctx.quadraticCurveTo(cx, cy + hubRadius * 0.26, cx + hubRadius * 0.36, cy + hubRadius * 0.12);
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#F59E0B';
+    ctx.stroke();
+
+    ctx.font = `700 ${Math.max(8, Math.floor(hubRadius * 0.22))}px "JetBrains Mono", monospace`;
+    ctx.fillStyle = '#DDD6FE';
+    ctx.fillText('CUI', cx, cy + hubRadius * 0.44);
+
+    // === 7. FIXED GOLDEN POINTER AT 12 O'CLOCK ===
     ctx.save();
     const ptrPivotX = cx;
-    const ptrPivotY = cy - outerRadius + 2;
+    const ptrPivotY = cy - outerRadius - 2;
     ctx.translate(ptrPivotX, ptrPivotY);
     ctx.rotate(pointerDeflection);
 
-    const ptrH = Math.max(42, Math.floor(canvasSize * 0.09));
-    const ptrW = Math.max(16, Math.floor(canvasSize * 0.038));
+    const ptrH = Math.max(30, Math.floor(canvasSize * 0.076));
+    const ptrW = Math.max(24, Math.floor(canvasSize * 0.060));
 
-    // Pointer outer glow
-    ctx.shadowColor = '#F0ABFC';
-    ctx.shadowBlur = isSpinning ? 20 + glowPulse * 8 : 14;
+    ctx.shadowColor = 'rgba(245,158,11,0.9)';
+    ctx.shadowBlur = isSpinning ? 18 : 12;
 
-    // Pointer gradient — bright fuchsia to violet
-    const ptrGrad = ctx.createLinearGradient(0, -10, 0, ptrH);
-    ptrGrad.addColorStop(0.0, '#FFFFFF');
-    ptrGrad.addColorStop(0.15, '#F0ABFC');
-    ptrGrad.addColorStop(0.5, '#D946EF');
-    ptrGrad.addColorStop(1.0, '#7C3AED');
+    const ptrGrad = ctx.createLinearGradient(-ptrW / 2, 0, ptrW / 2, ptrH);
+    ptrGrad.addColorStop(0.0, '#FEF08A');
+    ptrGrad.addColorStop(0.35, '#FBBF24');
+    ptrGrad.addColorStop(0.75, '#F59E0B');
+    ptrGrad.addColorStop(1.0, '#D97706');
 
     ctx.beginPath();
     ctx.moveTo(0, ptrH);
-    ctx.lineTo(-ptrW / 2, 0);
-    ctx.quadraticCurveTo(0, -16, ptrW / 2, 0);
+    ctx.lineTo(-ptrW / 2, 4);
+    ctx.quadraticCurveTo(-ptrW / 2, -4, -ptrW * 0.3, -4);
+    ctx.lineTo(ptrW * 0.3, -4);
+    ctx.quadraticCurveTo(ptrW / 2, -4, ptrW / 2, 4);
     ctx.closePath();
     ctx.fillStyle = ptrGrad;
     ctx.fill();
 
-    ctx.lineWidth = 2.5;
-    ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+    ctx.lineWidth = 1.8;
+    ctx.strokeStyle = '#FEF9C3';
     ctx.stroke();
 
-    // Jewel on pointer tip
+    // Small dark-gold jewel pin near pointer top
+    ctx.shadowBlur = 0;
     ctx.beginPath();
-    ctx.arc(0, ptrH - 6, 7, 0, TWO_PI);
-    ctx.fillStyle = '#FFFFFF';
-    ctx.shadowColor = '#FFFFFF';
-    ctx.shadowBlur = 14;
+    ctx.arc(0, 7, 3.2, 0, TWO_PI);
+    ctx.fillStyle = '#92400E';
     ctx.fill();
     ctx.beginPath();
-    ctx.arc(0, ptrH - 6, 4, 0, TWO_PI);
-    ctx.fillStyle = '#D946EF';
+    ctx.arc(-0.8, 6.2, 1.2, 0, TWO_PI);
+    ctx.fillStyle = '#FEF08A';
     ctx.fill();
 
     ctx.restore();
     ctx.restore();
   };
 
+  // Idle & celebration gentle illumination loop
   useEffect(() => {
     if (drawStatus === 'spinning') return;
 
@@ -476,16 +488,20 @@ export const SpinWheelCanvas: React.FC<SpinWheelCanvasProps> = ({
       return;
     }
 
-    // Gentle live LED chase & breathing halo when idle or celebrating a winner
     let rafId: number | null = null;
     let cancelled = false;
-    const ledSpeed = drawStatus === 'winner_revealed' ? 0.14 : 0.045;
+    const ledSpeed = drawStatus === 'winner_revealed' ? 0.14 : 0.04;
 
     const animateIdle = (now: number) => {
       if (cancelled) return;
       ledPhaseRef.current += ledSpeed;
-      glowPulseRef.current = Math.sin(now / (drawStatus === 'winner_revealed' ? 260 : 750));
-      renderWheelFrame(animatedRotationRef.current, 0, ledPhaseRef.current, glowPulseRef.current);
+      glowPulseRef.current = Math.sin(now / (drawStatus === 'winner_revealed' ? 260 : 850));
+      renderWheelFrame(
+        animatedRotationRef.current,
+        0,
+        ledPhaseRef.current,
+        glowPulseRef.current
+      );
       rafId = window.requestAnimationFrame(animateIdle);
     };
 
@@ -499,7 +515,7 @@ export const SpinWheelCanvas: React.FC<SpinWheelCanvasProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canvasSize, slices, rotation, drawStatus, prefersReducedMotion]);
 
-  // rAF spin loop
+  // Smooth rAF spin animation loop (preserves exact cryptoRandom targetRotation math)
   useEffect(() => {
     if (drawStatus !== 'spinning' || !activeSpinPlan) return;
 
@@ -510,7 +526,9 @@ export const SpinWheelCanvas: React.FC<SpinWheelCanvasProps> = ({
     if (prefersReducedMotion || durationMs <= 160) {
       animatedRotationRef.current = targetRotation;
       renderWheelFrame(targetRotation, 0, 1, 0);
-      const timer = window.setTimeout(() => { onSpinCompleteRef.current(); }, Math.max(20, durationMs));
+      const timer = window.setTimeout(() => {
+        onSpinCompleteRef.current();
+      }, Math.max(20, durationMs));
       return () => window.clearTimeout(timer);
     }
 
@@ -533,16 +551,21 @@ export const SpinWheelCanvas: React.FC<SpinWheelCanvasProps> = ({
 
       if (currentSliceIndex !== previousSliceIndex) {
         previousSliceIndex = currentSliceIndex;
-        pointerDeflectionRef.current = -Math.min(0.40, 0.08 + instantaneousVelocity * 0.32);
+        pointerDeflectionRef.current = -Math.min(0.36, 0.08 + instantaneousVelocity * 0.28);
         soundService.playWheelTick(instantaneousVelocity);
       } else {
-        pointerDeflectionRef.current *= 0.78;
+        pointerDeflectionRef.current *= 0.8;
       }
 
-      ledPhaseRef.current += 0.12 + instantaneousVelocity * 0.35;
-      glowPulseRef.current = Math.sin(now / 280);
+      ledPhaseRef.current += 0.14 + instantaneousVelocity * 0.36;
+      glowPulseRef.current = Math.sin(now / 260);
 
-      renderWheelFrame(currentAngle, pointerDeflectionRef.current, ledPhaseRef.current, glowPulseRef.current);
+      renderWheelFrame(
+        currentAngle,
+        pointerDeflectionRef.current,
+        ledPhaseRef.current,
+        glowPulseRef.current
+      );
 
       if (rawProgress < 1) {
         rafId = window.requestAnimationFrame(step);
@@ -562,44 +585,126 @@ export const SpinWheelCanvas: React.FC<SpinWheelCanvasProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSpinPlan, drawStatus, prefersReducedMotion]);
 
-  const currentPointerIndex = slices.length > 0 ? getSliceIndexAtPointer(animatedRotationRef.current, slices.length) : -1;
-  const currentPointerParticipant = currentPointerIndex >= 0 && currentPointerIndex < slices.length ? slices[currentPointerIndex] : null;
+  const currentPointerIndex =
+    slices.length > 0 ? getSliceIndexAtPointer(animatedRotationRef.current, slices.length) : -1;
+  const currentPointerParticipant =
+    currentPointerIndex >= 0 && currentPointerIndex < slices.length
+      ? slices[currentPointerIndex]
+      : null;
 
   return (
-    <div
-      ref={containerRef}
-      className="relative w-full max-w-[340px] sm:max-w-[480px] lg:max-w-[580px] xl:max-w-[620px] aspect-square mx-auto flex items-center justify-center select-none"
-    >
-      {/* Rainbow spinning glow ring — behind the wheel */}
+    <div className="relative w-full max-w-[330px] sm:max-w-[430px] lg:max-w-[490px] xl:max-w-[530px] mx-auto flex flex-col items-center select-none">
+      {/* Wheel Container */}
+      <div
+        ref={containerRef}
+        className="relative w-full aspect-square flex items-center justify-center z-10"
+      >
+        {/* Subtle luminous violet aura behind wheel */}
+        <div
+          aria-hidden="true"
+          className={`absolute inset-2 rounded-full blur-3xl transition-opacity duration-500 pointer-events-none ${
+            drawStatus === 'spinning'
+              ? 'opacity-85'
+              : drawStatus === 'winner_revealed'
+              ? 'opacity-90'
+              : 'opacity-55 animate-aura'
+          }`}
+          style={{
+            background:
+              drawStatus === 'winner_revealed'
+                ? 'radial-gradient(circle, rgba(251,191,36,0.45) 0%, rgba(168,85,247,0.45) 55%, transparent 75%)'
+                : 'radial-gradient(circle, rgba(168,85,247,0.6) 0%, rgba(109,40,217,0.3) 55%, transparent 75%)',
+          }}
+        />
+
+        <canvas
+          ref={canvasRef}
+          data-testid="spin-wheel-canvas"
+          data-slice-count={slices.length}
+          data-pointer-participant={currentPointerParticipant?.name ?? ''}
+          width={canvasSize}
+          height={canvasSize}
+          style={{ width: `${canvasSize}px`, height: `${canvasSize}px` }}
+          aria-label={`Lucky draw spin wheel with ${slices.length} visible segments`}
+          role="img"
+          className="relative z-10 block"
+        />
+      </div>
+
+      {/* Sculpted Metallic-Violet Stage Pedestal Base with Golden Accent Light (matches reference) */}
       <div
         aria-hidden="true"
-        className={`absolute inset-[-8px] rounded-full transition-all duration-700 pointer-events-none ${drawStatus === 'spinning' ? 'opacity-80 scale-105' : 'opacity-40 scale-100'}`}
-        style={{
-          background: 'conic-gradient(from 0deg, #7C3AED, #DB2777, #D97706, #059669, #2563EB, #DC2626, #0891B2, #7C3AED)',
-          filter: 'blur(20px)',
-          animation: drawStatus === 'spinning' ? 'spin 3s linear infinite' : 'none',
-        }}
-      />
+        className="relative -mt-6 sm:-mt-8 w-[84%] max-w-[420px] flex flex-col items-center pointer-events-none z-0"
+      >
+        {/* Angled support struts connecting wheel to plinth */}
+        <svg
+          viewBox="0 0 360 72"
+          fill="none"
+          className="w-full h-auto overflow-visible"
+        >
+          <defs>
+            <linearGradient id="pedestalBody" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#3B256B" />
+              <stop offset="35%" stopColor="#1B1038" />
+              <stop offset="100%" stopColor="#0C061D" />
+            </linearGradient>
+            <linearGradient id="pedestalRim" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.25" />
+              <stop offset="35%" stopColor="#DDD6FE" stopOpacity="0.8" />
+              <stop offset="50%" stopColor="#FFFFFF" stopOpacity="0.95" />
+              <stop offset="65%" stopColor="#DDD6FE" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0.25" />
+            </linearGradient>
+            <linearGradient id="goldBar" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#F59E0B" stopOpacity="0" />
+              <stop offset="20%" stopColor="#F59E0B" stopOpacity="0.9" />
+              <stop offset="50%" stopColor="#FEF08A" stopOpacity="1" />
+              <stop offset="80%" stopColor="#F59E0B" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="#F59E0B" stopOpacity="0" />
+            </linearGradient>
+          </defs>
 
-      {/* Soft dark mask so only rim glows */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-4 rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(circle, transparent 55%, rgba(6,4,18,0.9) 100%)' }}
-      />
+          {/* Left & Right structural stand legs */}
+          <path
+            d="M 105 4 L 78 36 L 116 36 L 130 12 Z"
+            fill="#1D113B"
+            stroke="rgba(196,181,253,0.35)"
+            strokeWidth="1.2"
+          />
+          <path
+            d="M 255 4 L 282 36 L 244 36 L 230 12 Z"
+            fill="#1D113B"
+            stroke="rgba(196,181,253,0.35)"
+            strokeWidth="1.2"
+          />
 
-      <canvas
-        ref={canvasRef}
-        data-testid="spin-wheel-canvas"
-        data-slice-count={slices.length}
-        data-pointer-participant={currentPointerParticipant?.name ?? ''}
-        width={canvasSize}
-        height={canvasSize}
-        style={{ width: `${canvasSize}px`, height: `${canvasSize}px` }}
-        aria-label={`Lucky draw spin wheel with ${slices.length} visible segments`}
-        role="img"
-        className="relative z-10 block"
-      />
+          {/* Floor ambient glow shadow */}
+          <ellipse cx="180" cy="64" rx="168" ry="12" fill="rgba(139,92,246,0.28)" />
+
+          {/* Pedestal base cylinder body */}
+          <path
+            d="M 32 38 C 32 30, 328 30, 328 38 L 328 56 C 328 66, 32 66, 32 56 Z"
+            fill="url(#pedestalBody)"
+            stroke="rgba(196,181,253,0.28)"
+            strokeWidth="1.2"
+          />
+
+          {/* Pedestal top elliptical surface */}
+          <ellipse
+            cx="180"
+            cy="38"
+            rx="148"
+            ry="11"
+            fill="#28174E"
+            stroke="url(#pedestalRim)"
+            strokeWidth="1.8"
+          />
+
+          {/* Glowing horizontal gold-amber light strip across pedestal front */}
+          <rect x="76" y="49" width="208" height="3.2" rx="1.6" fill="url(#goldBar)" />
+          <ellipse cx="180" cy="51" rx="88" ry="6" fill="rgba(245,158,11,0.24)" />
+        </svg>
+      </div>
     </div>
   );
 };

@@ -55,3 +55,22 @@
   3. **Concurrency Bug Fix (`useLuckyDraw.ts`)**: Added monotonic `fetchEpochRef` tracking so an in-flight Google Sheets fetch cannot overwrite Sandbox Mode data if the organizer switches modes before the initial network request completes.
   4. **Verification**: Confirmed `npm run build` (`tsc -b && vite build`), `npm run test` (20/20 Vitest tests), and `npm run test:e2e` (2/2 Playwright suites across `360px`–`1920px` viewports) all pass with zero errors.
   5. **Deployment**: Committed all verified changes locally on `main`; ready for `git push origin main` (GitHub authentication required) to trigger automatic AWS Amplify redeployment to `https://main.d2jqacu1gnle29.amplifyapp.com`.
+
+---
+
+## Log Entry 6 — Phase 14: Finalized Design Reference Implementation (COMSATS Campus Backdrop & Three-Column Stage)
+- **Timestamp**: `2026-11-24T02:58:00+05:00`
+- **Completed Work**:
+  1. **Real Campus Asset Preparation**: Trimmed top/bottom letterbox bars from the real COMSATS University Islamabad campus photo (`800×600` → clean `800×451` 16:9) and saved `public/assets/comsats-campus.png` alongside `public/assets/design-reference.png`.
+  2. **Stage Atmosphere (`AmbientBackground.tsx`)**: Placed the real COMSATS campus photograph behind the stage with deep midnight-purple vertical & radial readability overlays, central stage spotlight, floor glow, sweeping purple-and-gold neon SVG curves, and subtle floating particles (`prefers-reduced-motion` aware).
+  3. **Three-Column Desktop + Mobile-First Stage (`App.tsx`, `Header.tsx`, `WinnerHistoryCard.tsx`)**:
+     - Redesigned `Header.tsx` with the official AWS Cloud Club banner lockup, vertical divider, and glass pill cluster (`Participants Ready`, `History`, Sound, Fullscreen, `Organizer`).
+     - Added the centered `"Official Lucky Draw Event"` badge, `"AWS Student Builder Group"`, and `"COMSATS University Islamabad"` flanking-line lockup.
+     - Built a unified CSS Grid stage matching the reference's 3-column desktop layout (Left: `"Let the Wheel Decide!"` with golden curve underline, stat tiles, & `"Spin the Wheel"` CTA | Center: Illuminated wheel & pedestal | Right: Glassmorphic `"Lucky Draw"` info & Winner History card) while automatically reordering on tablet/mobile so the wheel and Spin CTA lead the viewport with zero horizontal scrolling.
+  4. **Wheel & Pedestal Redesign (`SpinWheelCanvas.tsx`)**: Implemented alternating luminous orchid & deep cosmic purple segments (with an odd-slice bridge shade), hemisphere-aware right-side-up radial labels (never upside down and never overlapping the hub or pointer), illuminated lavender-white outer bezel with 12 perimeter light segments, sculpted metallic-gold 12 o'clock pointer with peg deflection, gold-rimmed AWS center hub, and sculpted 3D stage pedestal with a golden accent bar.
+  5. **Preserved Business Logic**: Left `participantService.ts`, `cryptoRandom.ts`, `soundService.ts`, and `OrganizerPanel.tsx` core logic intact.
+  6. **Full Validation**:
+     - `npm run build` (`tsc -b && vite build`): passed with 0 TypeScript/bundler errors.
+     - `npm run test` (Vitest): **20 / 20 passed**.
+     - `npm run test:e2e` (Playwright): **2 / 2 passed** across `360px`, `390px`, `768px`, `1024px`, `1440px`, and `1920px` viewports with zero horizontal overflow.
+     - Live browser verification: confirmed `comsats-campus.png` loaded (`800×451`), live Google Sheets refresh returned live rows, exact pointer-to-winner match (`data-pointer-participant === winner-modal-name`), and visually inspected both `1440×900` desktop and `390×844` mobile renders.

@@ -69,7 +69,7 @@ export const WheelStatusBar: React.FC<WheelStatusBarProps> = ({
       )}
 
       {/* Telemetry metadata bar */}
-      <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-xs text-[#A9A3BE] px-3 py-2 rounded-xl bg-[#151027]/70 border border-[#C4B5FD]/10">
+      <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-xs text-[#B4ADC9] px-4 py-2 rounded-full bg-[#130C2B]/70 border border-purple-300/15 backdrop-blur-md">
         <div className="inline-flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5 text-[#A855F7]" />
           <span>Eligible Pool:</span>

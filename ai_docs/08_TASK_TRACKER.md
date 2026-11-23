@@ -89,4 +89,14 @@
 - [x] Redesign `App.tsx`, `Header.tsx`, `SplashScreen.tsx`, `WinnerModal.tsx`, `ConfettiOverlay.tsx`, and `WinnerHistoryCard.tsx` with glassmorphism, rainbow accents, shimmer CTA button, and 3-cannon confetti celebration
 - [x] Fix async fetch race condition in `useLuckyDraw.ts` so in-flight live sheet syncs never overwrite Sandbox Mode
 - [x] Re-verify full build (`npm run build`), Vitest unit tests (20/20), and Playwright E2E tests (2/2 across 6 viewports)
-- [ ] Push UI overhaul commit to `main` branch to trigger AWS Amplify auto-redeployment (requires GitHub authentication)
+
+## Phase 14 — Finalized Campus-Backdrop Three-Column UI Redesign (Design Reference v3)
+- [x] Prepare and crop real COMSATS campus photograph (`public/assets/comsats-campus.png`, 800×451 16:9) and archive `public/assets/design-reference.png`
+- [x] Implement real campus backdrop with dark midnight-purple gradient overlay, stage floor reflection, and sweeping purple-gold SVG light ribbons in `AmbientBackground.tsx`
+- [x] Redesign `Header.tsx` with official AWS Cloud Club banner lockup and pill controls (Participants Ready, History toggle, Sound, Fullscreen, Organizer CTA)
+- [x] Implement three-column desktop stage (`App.tsx`) with centered event title, left-column `"Let the Wheel Decide!"` + golden underline + stat tiles + Spin CTA, center wheel + pedestal, and right-column glassmorphic `"Lucky Draw"` card (reordered cleanly for tablet & mobile)
+- [x] Redesign `SpinWheelCanvas.tsx` with alternating purple segments, hemisphere auto-flipped right-side-up labels, luminous outer rim, fixed golden 12 o'clock pointer, gold-rimmed AWS center hub, and 3D stage pedestal with golden light bar
+- [x] Redesign `WinnerHistoryCard.tsx` as the dual-mode glassmorphic `"Lucky Draw"` feature & live Winner History panel with `"View Winner History"` and `"Refresh Participants"` actions
+- [x] Harmonize `SplashScreen.tsx`, `WinnerModal.tsx`, `ConfettiOverlay.tsx`, `WheelStatusBar.tsx`, and `Footer.tsx` to the refined purple-and-gold visual identity
+- [x] Validate production build (`tsc -b && vite build`), Vitest unit tests (20/20), Playwright E2E tests (2/2 across 360px–1920px), campus image loading, live Google Sheets sync, and exact pointer-to-winner accuracy
+- [ ] Push finalized redesign commit to `main` branch to trigger AWS Amplify auto-redeployment (requires GitHub authentication)

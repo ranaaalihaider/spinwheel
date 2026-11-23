@@ -4,55 +4,72 @@
 
 @layer base {
   :root {
-    --bg-primary: #090714;
-    --bg-secondary: #151027;
-    --bg-card: #1B1530;
+    --bg-primary: #080515;
+    --bg-secondary: #140D2A;
+    --bg-card: #181032;
     --purple-primary: #8B5CF6;
     --violet-accent: #A855F7;
     --lavender-highlight: #C4B5FD;
+    --gold-accent: #F59E0B;
+    --gold-light: #FDE68A;
     --text-primary: #FFFFFF;
-    --text-secondary: #A9A3BE;
+    --text-secondary: #B4ADC9;
   }
 
   html,
   body {
-    background-color: #090714;
+    background-color: #080515;
     color: #FFFFFF;
     font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
     overflow-x: hidden;
   }
 }
 
-/* Custom scrollbars */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: rgba(15, 11, 30, 0.6); }
-::-webkit-scrollbar-thumb { background: rgba(139, 92, 246, 0.35); border-radius: 9999px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(168, 85, 247, 0.6); }
-
-/* Spinning animation for the rainbow glow ring */
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+/* Custom subtle scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(14, 9, 30, 0.65);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(168, 85, 247, 0.35);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(192, 132, 252, 0.65);
 }
 
-/* Pulsing glow */
-@keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 30px rgba(139,92,246,0.5), 0 0 60px rgba(168,85,247,0.3); }
-  50%       { box-shadow: 0 0 60px rgba(168,85,247,0.8), 0 0 100px rgba(236,72,153,0.4); }
-}
-
-/* Shimmer sweep */
+/* Shimmer sweep for primary spin CTA */
 @keyframes shimmer {
-  0%   { transform: translateX(-100%) skewX(-15deg); }
-  100% { transform: translateX(200%) skewX(-15deg); }
+  0% {
+    transform: translateX(-120%) skewX(-18deg);
+  }
+  100% {
+    transform: translateX(240%) skewX(-18deg);
+  }
 }
 
 .animate-shimmer {
-  animation: shimmer 2.5s ease-in-out infinite;
+  animation: shimmer 3.2s ease-in-out infinite;
 }
 
-.animate-glow-pulse {
-  animation: glow-pulse 2.5s ease-in-out infinite;
+/* Subtle slow breathing halo */
+@keyframes aura-breathe {
+  0%,
+  100% {
+    opacity: 0.52;
+    transform: scale(0.99);
+  }
+  50% {
+    opacity: 0.82;
+    transform: scale(1.03);
+  }
+}
+
+.animate-aura {
+  animation: aura-breathe 4s ease-in-out infinite;
 }
 
 /* Respect prefers-reduced-motion globally */

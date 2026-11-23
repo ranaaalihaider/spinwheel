@@ -3,8 +3,8 @@ import { ShieldCheck } from 'lucide-react';
 
 export const Footer: React.FC = () => {
   return (
-    <footer className="relative z-10 w-full border-t border-[#C4B5FD]/10 bg-[#090714]/80 backdrop-blur-md py-4 px-4 mt-auto">
-      <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[#A9A3BE]">
+    <footer className="relative z-10 w-full border-t border-purple-300/15 bg-[#080515]/80 backdrop-blur-md py-3.5 px-4 mt-auto">
+      <div className="max-w-[1400px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[#B4ADC9]">
         <div className="flex items-center gap-2 text-center sm:text-left">
           <span className="font-semibold text-white">AWS Student Builder Group</span>
           <span>•</span>
